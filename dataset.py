@@ -9,35 +9,34 @@ import tensorflow as tf
 
 class Dataset:
     label_col_name = 'FVC'
-    root_dir = '/Users/younghun/Data/OSIC/'
 
-    # root_dir = '~/Data/OSIC'
+    def __init__(self, data_list, patient_list, label_list=None, batch_size=1, root_dir=None):
+        self.root_dir = root_dir
 
-    def __init__(self, data_list, batch_size=10):
-        # init labels
-        label_list = data_list[self.label_col_name].to_numpy()
-        self.patient_list = data_list['Patient'].to_numpy()
-
-        data_list.drop([self.label_col_name, 'Patient'], axis=1, inplace=True)
-        data_list = pd.get_dummies(data_list)
+        # init variables
+        self.data_list = data_list
+        self.label_list = label_list if label_list is not None else np.zeros(len(data_list), dtype=float)
+        self.patient_list = patient_list
 
         # init dataset
-        self.dataset = tf.data.Dataset.from_tensor_slices((data_list, label_list, np.arange(len(self.patient_list))))
-        self.dataset = self.dataset.map(lambda data, label, index: tf.py_function(self.read_img, [data, label, index], [tf.float64, tf.float64, tf.int64]))
-        # self.dataset = self.dataset.shuffle(buffer_size=(int(len(data_list)) + 1 * batch_size))
+        self.dataset = tf.data.Dataset.from_tensor_slices(
+            (self.data_list, self.label_list, np.arange(len(self.patient_list))))
+        self.dataset = self.dataset.map(lambda data, label, index: tf.py_function(self.read_img, [data, label, index],
+                                                                                  [tf.float64, tf.float64, tf.float64,
+                                                                                   tf.int64]))
+        #         self.dataset = self.dataset.repeat(epoch)
+        # self.dataset = self.dataset.shuffle(buffer_size=(int(len(data_list) * 0.4) + 3 * batch_size))
         self.dataset = self.dataset.batch(batch_size, drop_remainder=False)
 
     def __iter__(self):
-        # return self.dataset.__iter__()
-        for data in self.dataset:
-            print(data)
+        return self.dataset.__iter__()
 
     def read_img(self, data, label, index: tf.Tensor):
-        img_path = os.path.join(self.root_dir, 'preprocessing_data', f'{self.patient_list[index]}.npy')
+        patient = self.patient_list[index]
+        img_path = os.path.join(self.root_dir, f'{patient}.npy')
         img = np.load(img_path)
-        img.resize((38, 334, 334))
 
-        return img, data, label
+        return img, data, label, index
 
 
 if __name__ == '__main__':
