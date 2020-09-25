@@ -34,7 +34,7 @@ class Dataset:
     def read_img(self, data, label, index: tf.Tensor):
         patient = self.patient_list[index]
         img_path = os.path.join(self.root_dir, f'{patient}.npy')
-        img = np.load(img_path)
+        img = np.expand_dims(np.load(img_path), axis=-1)
 
         return img, data, label, index
 

@@ -79,8 +79,8 @@ def main(is_train=False):
         train_dataset = Dataset(train_data_copy, train_patient, label_list=train_label, batch_size=20,
                                 root_dir=image_dir)
 
-        model.fit(train_dataset, epoch_num=10, print_epoch=1)
-        model.save_weights('pfpModel')
+        model.fit(train_dataset, epoch_num=1, print_epoch=1)
+        model.save_weights('checkpoints/pfpModel')
     else:
         # Test Dataset
         test_label = test_data['FVC'].to_numpy()
@@ -89,6 +89,22 @@ def main(is_train=False):
         test_dataset = Dataset(test_data_copy, test_patient, root_dir=image_dir)
 
         # Load pretrained model
+        # model.load_weights('checkpoints/pfpModel')
+
+        test_result = test_label.copy()
+        print(test_result)
+        # test_result = []
+
+        for (img, x, y, index) in test_dataset.dataset:
+            index_val = index.numpy()[0]
+            patient = test_patient[index_val]
+            out = model((img, x)).numpy()
+            fvc = out[:, 1] if test_result[index_val] == 'None' else test_result[index_val]
+            confidence = out[:, 2] - out[:, 0]
+
+            test_result.append([fvc, confidence])
+
+        print(test_result)
 
 
 if __name__ == '__main__':

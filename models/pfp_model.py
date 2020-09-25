@@ -4,7 +4,7 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, Flatten, Conv3D, AvgPool3D
+from tensorflow.keras.layers import Dense, Flatten, Conv3D, AveragePooling3D
 from tensorflow.python.keras.layers import Lambda
 from tensorflow.keras.backend import mean
 
@@ -20,14 +20,14 @@ class PFPModel(Model):
         self.conv1 = tf.keras.Sequential([
             Conv3D(filters=100, kernel_size=3, padding='same', activation='relu'),
             Conv3D(filters=100, kernel_size=3, padding='same', activation='relu'),
-            # AvgPool3D(pool_size=(2, 2, 2)),
+            AveragePooling3D(pool_size=2),
             Conv3D(filters=100, kernel_size=3, padding='same', activation='relu'),
             # AvgPool3D(pool_size=(2, 2, 2)),
             Conv3D(filters=50, kernel_size=3, padding='same', activation='relu'),
-            Flatten(),
         ])
 
         self.fc = tf.keras.Sequential([
+            Flatten(),
             Dense(500, activation='relu'),
             Dense(100, activation='relu'),
         ])
