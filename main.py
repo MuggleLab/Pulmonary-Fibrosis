@@ -37,12 +37,15 @@ def preprocessing(data):
 def create_test_input(x, train_data):
     patient, weeks = x.split('_')
     weeks = int(weeks)
+    weeks_min_max = (-5, 133)
+    converted_weeks = (weeks - weeks_min_max[0]) / (weeks_min_max[1] - weeks_min_max[0])
 
     patient_info_list = train_data[train_data['Patient'] == patient]
-    patient_info = patient_info_list[patient_info_list['Weeks'] == weeks]
+    patient_info = patient_info_list[patient_info_list['Weeks'] == converted_weeks]
     if len(patient_info) == 0:
         patient_info = patient_info_list.iloc[0].copy()
-        patient_info.update({'Weeks': weeks, 'FVC': 'None'})
+        patient_info.update({'Weeks': converted_weeks, 'FVC': 'None'})
+
     else:
         patient_info = patient_info.iloc[0]
 
