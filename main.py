@@ -79,7 +79,7 @@ def main(is_train=False):
         train_dataset = Dataset(train_data_copy, train_patient, label_list=train_label, batch_size=10,
                                 root_dir=image_dir)
 
-        model.fit(train_dataset, epoch_num=1, print_epoch=1)
+        model.fit(train_dataset, epoch_num=100, print_epoch=10)
         model.save_weights('checkpoints/pfpModel')
     else:
         # Test Dataset

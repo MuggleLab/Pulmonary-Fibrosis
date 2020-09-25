@@ -1,4 +1,6 @@
 # Build Model
+import sys
+
 import pandas as pd
 import numpy as np
 
@@ -75,21 +77,19 @@ class PFPModel(Model):
         #with strategy.scope():
 
         for epoch in range(epoch_num):
-            print('sTART', epoch)
+            #print('sTART', epoch)
             for step, (img, x, y, index) in enumerate(dataset.dataset):
-                if step == 35:
-                    print(1)
-
                 y = tf.reshape(tf.cast(y, tf.float32), (-1, 1))
                 with tf.GradientTape() as tape:
                     output = self.call((img, x), training=True)
                     loss = self.loss(y, output)
                     gradients = tape.gradient(loss, self.trainable_variables)
                     self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-                    print(epoch, step)
+                    #print(epoch, step)
 
             if epoch % print_epoch == 0:
                 print('Epoch:', epoch, 'Loss: ', loss.numpy().mean())
+                sys.stdout.flush()
 
     def call(self, inputs, training=False, *args, **kwargs):
         """

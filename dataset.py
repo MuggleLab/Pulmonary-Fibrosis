@@ -37,6 +37,7 @@ class Dataset:
         img_path = os.path.join(self.root_dir, f'{patient}.npy')
         img = np.multiply(np.load(img_path), -1)
         img = np.expand_dims(img, axis=-1)
+        img = np.resize(img, (68, 90, 90, 1))
 
         return img, data, label, index
 
