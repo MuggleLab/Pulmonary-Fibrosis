@@ -17,18 +17,18 @@ class PFPModel(Model):
         self.build_model()
 
     def build_model(self):
+        #data_format = 'channels_first'
         self.conv1 = tf.keras.Sequential([
-            Conv3D(filters=100, kernel_size=3, padding='same', activation='relu'),
-            Conv3D(filters=100, kernel_size=3, padding='same', activation='relu'),
-            AveragePooling3D(pool_size=2),
-            Conv3D(filters=100, kernel_size=3, padding='same', activation='relu'),
-            # AvgPool3D(pool_size=(2, 2, 2)),
-            Conv3D(filters=50, kernel_size=3, padding='same', activation='relu'),
+            Conv3D(filters=10, kernel_size=5, padding='same', activation='relu'),
+            Conv3D(filters=5, kernel_size=5, padding='same', activation='relu'),
+            Conv3D(filters=5, kernel_size=5, strides=2, padding='valid', activation='relu'),
+            # AveragePooling3D(pool_size=10),
+            Conv3D(filters=1, kernel_size=5, strides=2, padding='valid', activation='relu'),
+            # AveragePooling3D(pool_size=10),
         ])
-
+        self.flat = Flatten()
         self.fc = tf.keras.Sequential([
-            Flatten(),
-            Dense(500, activation='relu'),
+            Dense(100, activation='relu'),
             Dense(100, activation='relu'),
         ])
 
@@ -69,26 +69,29 @@ class PFPModel(Model):
         # compile
         self.compile(loss=self.mloss(0.8),
                      metrics=[self.score],
-                     optimizer=tf.keras.optimizers.Adam(lr=0.1,
-                                                        beta_1=0.9,
-                                                        beta_2=0.999,
-                                                        epsilon=None,
-                                                        decay=0.01,
-                                                        amsgrad=False))
+                     optimizer=tf.keras.optimizers.Adam())
+
+        #strategy = tf.distribute.MirroredStrategy()
+        #with strategy.scope():
 
         for epoch in range(epoch_num):
+            print('sTART', epoch)
             for step, (img, x, y, index) in enumerate(dataset.dataset):
+                if step == 35:
+                    print(1)
+
                 y = tf.reshape(tf.cast(y, tf.float32), (-1, 1))
                 with tf.GradientTape() as tape:
-                    output = self.call((img, x))
+                    output = self.call((img, x), training=True)
                     loss = self.loss(y, output)
                     gradients = tape.gradient(loss, self.trainable_variables)
                     self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+                    print(epoch, step)
 
             if epoch % print_epoch == 0:
                 print('Epoch:', epoch, 'Loss: ', loss.numpy().mean())
 
-    def call(self, inputs, *args, **kwargs):
+    def call(self, inputs, training=False, *args, **kwargs):
         """
         inputs: {imgs: [], info: []}
         """
@@ -103,11 +106,12 @@ class PFPModel(Model):
         imgs = tf.cast(imgs, tf.float32)
         info = tf.cast(info, tf.float32)
 
-        conv_out = self.conv1(imgs)
+        conv_out = self.conv1(imgs, training=training)
+        conv_out = self.flat(conv_out, training=training)
 
         info = tf.concat((conv_out, info), axis=1)
-        out = self.fc(info)
-        out = self.preds([self.p1(out), self.p2(out)])
+        out = self.fc(info, training=training)
+        out = self.preds([self.p1(out), self.p2(out)], training=training)
         return out
 
     def inference(self, dataset):

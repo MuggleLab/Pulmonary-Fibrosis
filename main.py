@@ -76,7 +76,7 @@ def main(is_train=False):
         train_label = train_data['FVC'].to_numpy()
         train_patient = train_data['Patient'].to_numpy()
         train_data_copy = train_data.drop(['FVC', 'Patient'], axis=1)
-        train_dataset = Dataset(train_data_copy, train_patient, label_list=train_label, batch_size=20,
+        train_dataset = Dataset(train_data_copy, train_patient, label_list=train_label, batch_size=10,
                                 root_dir=image_dir)
 
         model.fit(train_dataset, epoch_num=1, print_epoch=1)
