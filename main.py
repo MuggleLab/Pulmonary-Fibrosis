@@ -86,30 +86,36 @@ def main(is_train=False):
         model.save_weights('checkpoints/pfpModel')
     else:
         # Test Dataset
-        test_label = test_data['FVC'].to_numpy()
+        test_label = test_data[['FVC']].copy()
         test_patient = test_data['Patient'].to_numpy()
         test_data_copy = test_data.drop(['FVC', 'Patient'], axis=1)
         test_dataset = Dataset(test_data_copy, test_patient, root_dir=image_dir)
 
         # Load pretrained model
-        # model.load_weights('checkpoints/pfpModel')
+        model.load_weights('checkpoints/pfpModel')
 
-        test_result = test_label.copy()
-        print(test_result)
-        # test_result = []
-
+        test_label['Confidence'] = 70
         for (img, x, y, index) in test_dataset.dataset:
             index_val = index.numpy()[0]
             patient = test_patient[index_val]
             out = model((img, x)).numpy()
-            fvc = out[:, 1] if test_result[index_val] == 'None' else test_result[index_val]
-            confidence = out[:, 2] - out[:, 0]
 
-            test_result.append([fvc, confidence])
+            # FVC
+            if test_label.iloc[index_val, 0] == 'None':
+                test_label.iloc[index_val, 0] = out[:, 1]
 
-        print(test_result)
+            # Confidence
+            test_label.iloc[index_val, 1] = out[:, 2] - out[:, 0]
+
+        for idx, row in test_label.iterrows():
+            fvc = row[0]
+            confidence = row[1]
+            submission.iloc[idx, 1] = float(fvc)
+            submission.iloc[idx, 2] = float(confidence)
+
+        submission.to_csv('submission.csv', index=False)
 
 
 if __name__ == '__main__':
-    is_train = True
+    is_train = False
     main(is_train)
