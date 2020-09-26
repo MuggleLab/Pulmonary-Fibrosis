@@ -27,7 +27,7 @@ class PFPModel(Model):
             AvgPool3D(pool_size=(3, 3, 3)),
             Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
             AvgPool3D(pool_size=(2, 3, 3)),
-            Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
+            # Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
             Conv3D(filters=10, kernel_size=5, padding='same', activation='relu'),
             Conv3D(filters=10, kernel_size=5, padding='same', activation='relu'),
             # MaxPool3D(pool_size=10),
@@ -36,7 +36,6 @@ class PFPModel(Model):
         self.fc = tf.keras.Sequential([
             Dense(100, activation='relu'),
             Dense(100, activation='relu'),
-            Dense(50, activation='relu'),
         ])
 
         self.p1 = Dense(3, activation="linear", name="p1")
@@ -76,7 +75,7 @@ class PFPModel(Model):
         # compile
         self.compile(loss=self.mloss(0.8),
                      metrics=[self.score],
-                     optimizer=tf.keras.optimizers.Adam(lr=0.1, beta_1=0.9, beta_2=0.999,
+                     optimizer=tf.keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999,
                                                         epsilon=None, decay=0.01, amsgrad=False))
 
         #strategy = tf.distribute.MirroredStrategy()

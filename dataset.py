@@ -15,14 +15,14 @@ class Dataset:
 
         # init variables
         self.data_list = data_list
-        self.label_list = label_list if label_list is not None else np.zeros(len(data_list), dtype=float)
+        self.label_list = label_list if label_list is not None else np.zeros(len(data_list), dtype=int)
         self.patient_list = patient_list
 
         # init dataset
         self.dataset = tf.data.Dataset.from_tensor_slices(
             (self.data_list, self.label_list, np.arange(len(self.patient_list))))
         self.dataset = self.dataset.map(lambda data, label, index: tf.py_function(self.read_img, [data, label, index],
-                                                                                  [tf.float64, tf.float64, tf.float64,
+                                                                                  [tf.float64, tf.float64, tf.int64,
                                                                                    tf.int64]))
         if shuffle:
             self.dataset = self.dataset.shuffle(buffer_size=(int(len(data_list) * 0.4) + 3 * batch_size))
