@@ -10,7 +10,7 @@ import tensorflow as tf
 class Dataset:
     label_col_name = 'FVC'
 
-    def __init__(self, data_list, patient_list, label_list=None, batch_size=1, root_dir=None):
+    def __init__(self, data_list, patient_list, label_list=None, batch_size=1, root_dir=None, shuffle=False):
         self.root_dir = root_dir
 
         # init variables
@@ -24,8 +24,10 @@ class Dataset:
         self.dataset = self.dataset.map(lambda data, label, index: tf.py_function(self.read_img, [data, label, index],
                                                                                   [tf.float64, tf.float64, tf.float64,
                                                                                    tf.int64]))
+        if shuffle:
+            self.dataset = self.dataset.shuffle(buffer_size=(int(len(data_list) * 0.4) + 3 * batch_size))
         #         self.dataset = self.dataset.repeat(epoch)
-        # self.dataset = self.dataset.shuffle(buffer_size=(int(len(data_list) * 0.4) + 3 * batch_size))
+
         self.dataset = self.dataset.batch(batch_size, drop_remainder=False)
 
     def __iter__(self):
@@ -37,7 +39,7 @@ class Dataset:
         img_path = os.path.join(self.root_dir, f'{patient}.npy')
         img = np.multiply(np.load(img_path), -1)
         img = np.expand_dims(img, axis=-1)
-        img = np.resize(img, (68, 90, 90, 1))
+        # img = np.resize(img, (68, 90, 90, 1))
 
         return img, data, label, index
 

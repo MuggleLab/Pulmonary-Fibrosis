@@ -18,7 +18,7 @@ def preprocessing(data):
 
     # min-max (MaxFvc, Age, FVC)
     fvc_min_max = (data['FVC'].min(), data['FVC'].max())
-    weeks_min_max = (-5, 133)
+    weeks_min_max = (-12, 133)
 
     col_list = ['MaxFvc', 'Age', 'FVC', 'Weeks']
     for col in col_list:
@@ -52,7 +52,7 @@ def create_test_input(x, train_data):
     return patient_info
 
 
-def main(is_train=False):
+def main(model_name, is_train=False):
     # init data path
     root_dir = './dataset/OSIC'
     image_dir = os.path.join(root_dir, 'osic-processed-image-saved-to-npy')
@@ -80,10 +80,10 @@ def main(is_train=False):
         train_patient = train_data['Patient'].to_numpy()
         train_data_copy = train_data.drop(['FVC', 'Patient'], axis=1)
         train_dataset = Dataset(train_data_copy, train_patient, label_list=train_label, batch_size=10,
-                                root_dir=image_dir)
+                                root_dir=image_dir, shuffle=True)
 
-        model.fit(train_dataset, epoch_num=100, print_epoch=10)
-        model.save_weights('checkpoints/pfpModel')
+        model.fit(train_dataset, epoch_num=50, print_epoch=1)
+        model.save_weights(f'checkpoints/{model_name}')
     else:
         # Test Dataset
         test_label = test_data[['FVC']].copy()
@@ -92,7 +92,7 @@ def main(is_train=False):
         test_dataset = Dataset(test_data_copy, test_patient, root_dir=image_dir)
 
         # Load pretrained model
-        model.load_weights('checkpoints/pfpModel')
+        model.load_weights(f'checkpoints/{model_name}')
 
         test_label['Confidence'] = 70
         for (img, x, y, index) in test_dataset.dataset:
@@ -107,15 +107,18 @@ def main(is_train=False):
             # Confidence
             test_label.iloc[index_val, 1] = out[:, 2] - out[:, 0]
 
+        submission = pd.read_csv(submission_csv_path)
+        fvc_min, fvc_max = fvc_min_max
         for idx, row in test_label.iterrows():
             fvc = row[0]
             confidence = row[1]
-            submission.iloc[idx, 1] = float(fvc)
-            submission.iloc[idx, 2] = float(confidence)
+            submission.iloc[idx, 1] = float(fvc * (fvc_max - fvc_min) + fvc_min)
+            submission.iloc[idx, 2] = float(confidence * (fvc_max - fvc_min) + fvc_min)
 
         submission.to_csv('submission.csv', index=False)
 
 
 if __name__ == '__main__':
-    is_train = False
-    main(is_train)
+    is_train = True
+    model_name = 'pfpModel_0926_2143'
+    main(model_name=model_name, is_train=is_train)
