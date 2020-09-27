@@ -13,17 +13,31 @@ min_max_info = {
     'MaxFvc': (1598, 4923),
     'Age': (49, 88),
     # 'FVC': (827, 6399),
-    'Weeks': (-5, 133),
+    'Weeks': (-12, 133),
+    'FirstWeek': (0, 145),
+    'FirstFVC': (827, 6399),
 }
 
 
 def preprocessing(data):
     # Get Mex Percent
     data['MaxFvc'] = data['FVC'] / data['Percent'] * 100
-    data.drop(['Percent'], axis=1, inplace=True)
+    data['MinWeek'] = data.groupby('Patient')['Weeks'].transform('min')
+    base = data.loc[data.Weeks == data.MinWeek]
+    base = base[['Patient', 'FVC']].copy()
+    base.columns = ['Patient', 'FirstFVC']
+    base['nb'] = 1
+    base.groupby('Patient').count()
+    base['nb'] = base.groupby('Patient')['nb'].transform('cumsum')
+    base = base[base.nb == 1]
+    base.drop('nb', axis=1, inplace=True)
+    data = data.merge(base, on='Patient', how='left')
+    data['FirstWeek'] = data['Weeks'] - data['MinWeek']
+
+    # Drop Columns
+    data.drop(['Percent', 'MinWeek'], axis=1, inplace=True)
 
     # min-max (MaxFvc, Age, FVC)
-
     for col in min_max_info.keys():
         min_val, max_val = min_max_info[col]
         data[col] = (data[col] - min_val) / (max_val - min_val)
@@ -107,15 +121,11 @@ def main(model_name, is_train=False):
             test_label.iloc[index_val, 1] = out[:, 2] - out[:, 0]
 
         submission = pd.read_csv(submission_csv_path)
-        #fvc_min, fvc_max = min_max_info['FVC']
         for idx, row in test_label.iterrows():
             fvc = row[0]
             confidence = row[1]
             submission.iloc[idx, 1] = float(fvc)
             submission.iloc[idx, 2] = float(confidence)
-
-            #submission.iloc[idx, 1] = float(fvc * (fvc_max - fvc_min) + fvc_min)
-            #submission.iloc[idx, 2] = float(confidence * (fvc_max - fvc_min) + fvc_min)
 
         submission.to_csv('submission.csv', index=False)
 

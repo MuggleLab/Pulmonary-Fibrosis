@@ -1,10 +1,13 @@
 # Build Model
 import sys
+import logging
 
 import pandas as pd
 import numpy as np
 
 import tensorflow as tf
+from tqdm import tqdm
+
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Flatten, Conv3D, MaxPool3D, AvgPool3D
 from tensorflow.python.keras.layers import Lambda
@@ -15,22 +18,18 @@ class PFPModel(Model):
     def __init__(self):
         super().__init__()
         self.C1, self.C2 = tf.constant(70, dtype='float32'), tf.constant(1000, dtype="float32")
-
         self.build_model()
 
     def build_model(self):
-        #data_format = 'channels_first'
         self.conv1 = tf.keras.Sequential([
             Conv3D(filters=10, kernel_size=5, padding='same', activation='relu'),
-            Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
+            # Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
             Conv3D(filters=20, kernel_size=3, padding='same', activation='relu'),
             AvgPool3D(pool_size=(3, 3, 3)),
             Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
             AvgPool3D(pool_size=(2, 3, 3)),
-            # Conv3D(filters=20, kernel_size=5, padding='same', activation='relu'),
             Conv3D(filters=10, kernel_size=5, padding='same', activation='relu'),
             Conv3D(filters=10, kernel_size=5, padding='same', activation='relu'),
-            # MaxPool3D(pool_size=10),
         ])
         self.flat = Flatten()
         self.fc = tf.keras.Sequential([
@@ -71,18 +70,17 @@ class PFPModel(Model):
 
         return loss
 
-    def fit(self, dataset, epoch_num=100, print_epoch=10):
+    def fit(self, dataset, epoch_num=100, print_epoch=10, save_epoch=100, save_dir='./'):
         # compile
         self.compile(loss=self.mloss(0.8),
                      metrics=[self.score],
                      optimizer=tf.keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999,
                                                         epsilon=None, decay=0.01, amsgrad=False))
 
-        #strategy = tf.distribute.MirroredStrategy()
-        #with strategy.scope():
-
-        for epoch in range(epoch_num):
-            #print('sTART', epoch)
+        # strategy = tf.distribute.MirroredStrategy()
+        # with strategy.scope():=
+        pbar = tqdm(total=epoch_num, file=sys.stdout)
+        for epoch in range(1, epoch_num + 1):
             loss_val = []
             for step, (img, x, y, index) in enumerate(dataset.dataset):
                 y = tf.reshape(tf.cast(y, tf.float32), (-1, 1))
@@ -94,9 +92,19 @@ class PFPModel(Model):
 
                     loss_val.append(loss.numpy())
 
-            if epoch % print_epoch == 0:
-                print('Epoch:', epoch + 1, '\tLoss: ', np.mean(loss_val), '\tLast Output: ', output.numpy()[0])
-                sys.stdout.flush()
+            # logging.info('Epoch:', epoch, '\tLoss: ', np.mean(loss_val), '\tLast Output: ', output.numpy()[0])
+            if epoch % print_epoch == 0 or epoch == epoch_num:
+                pbar.write(f'Epoch: {epoch} \tLoss: {np.mean(loss_val)}, \tLast Output: {output.numpy()[0]}')
+
+                # print('Epoch:', epoch, '\tLoss: ', np.mean(loss_val), '\tLast Output: ', output.numpy()[0])
+                # sys.stdout.flush()
+
+            if epoch % save_epoch == 0 or epoch == epoch_num:
+                loss_mean = np.mean(loss_val)
+                loss_mean = int(loss_mean * 100) / 100.0
+                self.save_weights(f'{save_dir}/pfp_model_{epoch}_loss({loss_mean})')
+
+            pbar.update(1)
 
     def call(self, inputs, training=False, *args, **kwargs):
         """
